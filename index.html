@@ -1,1066 +1,125 @@
 <!DOCTYPE html>
 <html lang="he" dir="rtl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>QuietControl E27.6.31.2 (Clean+RowColor)</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>QuietControl</title>
 
-  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 
-  <style>
-    :root{
-      --card:#ffffff;
-      --ink:#2a2a2a;
-      --muted:#6a6a6a;
-      --line:#e5e7f2;
-
-      --radius:16px;
-
-      --fontBody: Arial, sans-serif;
-      --fontHead: "Poppins", Arial, sans-serif;
-
-      --shadow: 0 8px 24px rgba(16,24,40,0.06);
-
-      --teal:#7fdddd;
-      --teal2:#57cfcf;
-
-      --ok:#2e7d32;
-      --warn:#c0392b;
-
-      --work:#bfe9ff;
-      --personal:#ffe6bf;
-      --accent:#111827;
-    }
-
-    *{ box-sizing:border-box; }
-    body{
-      margin:0;
-      background:#f6f7fb;
-      font-family:var(--fontBody);
-      color:var(--ink);
-    }
-
-    .daypartCard{
-      position:fixed;
-      right:16px;
-      bottom:16px;
-      z-index:50;
-      width:180px;
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:14px;
-      box-shadow:var(--shadow);
-      padding:10px;
-    }
-    .daypartTitle{
-      font-weight:700;
-      font-size:12px;
-      color:#1f2937;
-      margin-bottom:8px;
-    }
-    .daypartBtns{
-      display:flex;
-      gap:6px;
-      justify-content:space-between;
-    }
-    .daypartBtn{
-      flex:1;
-      border:1px solid var(--line);
-      background:#fff;
-      border-radius:10px;
-      padding:8px 6px;
-      cursor:pointer;
-      font-weight:700;
-      font-size:12px;
-    }
-    .daypartBtn.on{
-      border-color:rgba(17,24,39,0.35);
-      background:#f3f4f6;
-    }
-
-    .topbar{
-      position:sticky;
-      top:0;
-      z-index:40;
-      background:rgba(246,247,251,0.92);
-      backdrop-filter: blur(10px);
-      border-bottom:1px solid var(--line);
-      padding:10px 14px;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-    }
-    .topbarLeft{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .mini{
-      font-size:12px;
-      color:var(--muted);
-      font-weight:700;
-    }
-    .saveBtn{
-      border:1px solid rgba(17,24,39,0.20);
-      background:#fff;
-      border-radius:12px;
-      padding:8px 12px;
-      cursor:pointer;
-      font-weight:800;
-    }
-    #saveState{
-      display:none;
-      font-size:12px;
-      color:var(--ok);
-      font-weight:800;
-    }
-    .logout{
-      border:1px solid rgba(192,57,43,0.25);
-      background:#fff;
-      color:#b42318;
-      border-radius:12px;
-      padding:8px 12px;
-      cursor:pointer;
-      font-weight:800;
-    }
-
-    .wrap{
-      max-width:1240px;
-      margin:14px auto 24px;
-      padding:0 14px;
-    }
-    .grid{
-      display:grid;
-      grid-template-columns: 1fr 360px;
-      gap:14px;
-      align-items:start;
-    }
-    @media (max-width: 1080px){
-      .grid{ grid-template-columns: 1fr; }
-    }
-
-    .card{
-      background:var(--card);
-      border:1px solid var(--line);
-      border-radius:var(--radius);
-      box-shadow:var(--shadow);
-      overflow:hidden;
-    }
-
-    .banner{
-      display:flex;
-      align-items:stretch;
-      gap:12px;
-      padding:12px;
-      background:linear-gradient(90deg, rgba(127,222,222,0.16), rgba(255,255,255,0));
-      border-bottom:1px solid var(--line);
-    }
-    .bannerLeft{
-      flex:0 0 210px;
-      display:flex;
-      align-items:center;
-      justify-content:flex-start;
-    }
-    .weatherStrip{
-      width:100%;
-      min-height:58px;
-      border:1px solid rgba(17,24,39,0.10);
-      border-radius:14px;
-      background:#fff;
-      padding:8px 10px;
-      display:flex;
-      align-items:center;
-      gap:8px;
-      overflow:hidden;
-    }
-    .weatherLoading{
-      font-size:12px;
-      color:var(--muted);
-      font-weight:700;
-    }
-    .bannerText{
-      flex:1;
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      min-height:58px;
-    }
-    .bannerTitle{
-      font-family:var(--fontHead);
-      font-weight:800;
-      font-size:26px;
-      letter-spacing:0.2px;
-    }
-    .bannerSub{
-      font-size:12px;
-      color:var(--muted);
-      font-weight:700;
-      margin-top:2px;
-    }
-
-    .pill{
-      flex:0 0 auto;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      border:1px solid rgba(17,24,39,0.12);
-      background:#fff;
-      border-radius:999px;
-      padding:8px 12px;
-      font-weight:800;
-      font-size:12px;
-      color:#111827;
-      white-space:nowrap;
-    }
-
-    /* LOGIN */
-    #loginWrap{
-      position:fixed;
-      inset:0;
-      background:radial-gradient(circle at 20% 20%, rgba(127,222,222,0.18), transparent 35%),
-                 radial-gradient(circle at 80% 40%, rgba(255,230,191,0.22), transparent 40%),
-                 #f6f7fb;
-      display:block;
-      z-index:100;
-      padding:24px 14px;
-      overflow:auto;
-    }
-    .loginCard{
-      max-width:520px;
-      margin:6vh auto 0;
-      background:#fff;
-      border:1px solid var(--line);
-      border-radius:20px;
-      box-shadow:var(--shadow);
-      padding:18px;
-    }
-    .loginBrand{
-      display:flex;
-      align-items:flex-start;
-      justify-content:space-between;
-      gap:12px;
-      margin-bottom:12px;
-    }
-    .loginTitle{
-      font-family:var(--fontHead);
-      font-weight:800;
-      margin:0;
-      font-size:34px;
-      letter-spacing:0.3px;
-    }
-    .loginSub{
-      margin-top:4px;
-      font-size:12px;
-      color:var(--muted);
-      font-weight:700;
-    }
-    .loginLabel{
-      display:block;
-      margin-top:12px;
-      margin-bottom:6px;
-      font-size:12px;
-      color:#111827;
-      font-weight:800;
-    }
-    #pw, #loginEmail, #loginPass{
-      width:100%;
-      border:1px solid rgba(17,24,39,0.18);
-      border-radius:14px;
-      padding:12px 12px;
-      font-size:16px;
-      outline:none;
-      background:#fff;
-    }
-    .loginRow{
-      display:flex;
-      align-items:center;
-      gap:10px;
-      margin-top:12px;
-    }
-    .loginBtn{
-      flex:1;
-      border:1px solid rgba(17,24,39,0.20);
-      border-radius:14px;
-      padding:10px 12px;
-      cursor:pointer;
-      font-weight:900;
-      background:#fff;
-      font-size:14px;
-    }
-    .loginPrimary{
-      background:#111827;
-      color:#fff;
-      border-color:#111827;
-    }
-    .loginGhost{
-      background:#f3f4f6;
-    }
-    #err{ display:none; margin-top:10px; font-weight:800; color:#b30000; }
-    .loginHint{
-      margin-top:12px;
-      font-size:12px;
-      color:var(--muted);
-      font-weight:700;
-      line-height:1.35;
-    }
-
-    /* ===== Existing app styles (kept) ===== */
-    .mot{
-      padding:12px;
-      border-bottom:1px solid var(--line);
-      display:flex;
-      align-items:center;
-      justify-content:space-between;
-      gap:10px;
-      flex-wrap:wrap;
-    }
-    .motTitle{
-      font-weight:900;
-      font-size:14px;
-    }
-    .motRight{
-      display:flex;
-      gap:8px;
-      align-items:center;
-      flex-wrap:wrap;
-    }
-    .fmtBtn{
-      border:1px solid rgba(17,24,39,0.14);
-      background:#fff;
-      border-radius:12px;
-      padding:8px 10px;
-      cursor:pointer;
-      font-weight:900;
-      font-size:12px;
-      display:inline-flex;
-      align-items:center;
-      gap:8px;
-      white-space:nowrap;
-    }
-    .fmtBtn svg{ width:16px; height:16px; }
-
-    .tabs{
-      display:flex;
-      gap:8px;
-      padding:12px;
-      border-bottom:1px solid var(--line);
-      align-items:center;
-      flex-wrap:wrap;
-    }
-    .tab{
-      border:1px solid rgba(17,24,39,0.12);
-      background:#fff;
-      border-radius:999px;
-      padding:8px 12px;
-      cursor:pointer;
-      font-weight:900;
-      font-size:12px;
-      white-space:nowrap;
-    }
-    .tab.on{
-      background:#111827;
-      color:#fff;
-      border-color:#111827;
-    }
-
-    .section{
-      padding:12px;
-    }
-
-    .legend{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      margin-bottom:10px;
-      font-size:12px;
-      color:#111827;
-      font-weight:800;
-    }
-    .dot{
-      width:10px; height:10px; border-radius:50%;
-      display:inline-block;
-      margin-left:6px;
-      border:1px solid rgba(17,24,39,0.12);
-    }
-    .dot.work{ background:var(--work); }
-    .dot.personal{ background:var(--personal); }
-
-    .table{
-      width:100%;
-      border-collapse:separate;
-      border-spacing:0;
-      overflow:hidden;
-      border:1px solid var(--line);
-      border-radius:16px;
-      background:#fff;
-    }
-    .table thead th{
-      position:sticky;
-      top:0;
-      background:#f9fafb;
-      border-bottom:1px solid var(--line);
-      font-size:12px;
-      text-align:right;
-      padding:10px;
-      color:#111827;
-      font-weight:900;
-      z-index:2;
-      white-space:nowrap;
-    }
-    .table tbody td{
-      border-bottom:1px solid rgba(229,231,242,0.7);
-      padding:10px;
-      vertical-align:top;
-      min-height:46px;
-    }
-    .table tbody tr:last-child td{ border-bottom:none; }
-
-    .taskCell{
-      padding:8px 10px;
-      border-radius:14px;
-      border:1px solid rgba(17,24,39,0.10);
-      background:#fff;
-      min-height:44px;
-    }
-
-    .taskText{
-      outline:none;
-      min-height:20px;
-      line-height:1.35;
-      font-size:14px;
-      font-weight:700;
-      color:#111827;
-    }
-    .taskMeta{
-      display:flex;
-      justify-content:space-between;
-      align-items:center;
-      margin-top:6px;
-      gap:8px;
-      flex-wrap:wrap;
-    }
-    .badge{
-      font-size:11px;
-      font-weight:900;
-      border-radius:999px;
-      padding:6px 10px;
-      border:1px solid rgba(17,24,39,0.10);
-      background:#f3f4f6;
-      white-space:nowrap;
-    }
-    .badge.work{ background:rgba(191,233,255,0.55); }
-    .badge.personal{ background:rgba(255,230,191,0.6); }
-
-    .side{
-      display:flex;
-      flex-direction:column;
-      gap:14px;
-    }
-    .sideCard{
-      padding:12px;
-    }
-    .sideTitle{
-      font-weight:900;
-      font-size:14px;
-      margin:0 0 10px 0;
-    }
-    textarea.note{
-      width:100%;
-      min-height:120px;
-      border:1px solid rgba(17,24,39,0.14);
-      border-radius:14px;
-      padding:12px;
-      font-size:14px;
-      font-weight:700;
-      outline:none;
-      resize:vertical;
-      background:#fff;
-    }
-
-    .top .taskText:focus{
-      border-color:rgba(127,222,222,0.9);
-      box-shadow:0 0 0 3px rgba(127,222,222,0.20);
-    }
-    .top .taskText[data-placeholder]:empty:before{
-      content: attr(data-placeholder);
-      color: rgba(106,106,106,0.75);
-    }
-
-    .fmtBtn.fmtExport{
-      border-color:#cfe3d3;
-      background:#eef8f0;
-    }
-    .fmtBtn.fmtExport svg{ width:16px; height:16px; }
-  </style>
-
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+body{font-family:Arial;margin:0;background:#f4f6f9}
+#login,#app{max-width:600px;margin:80px auto;background:#fff;padding:20px;border-radius:12px;box-shadow:0 5px 20px rgba(0,0,0,.08)}
+input,button,textarea{width:100%;padding:10px;margin-top:10px;border-radius:8px;border:1px solid #ccc}
+button{background:#111827;color:#fff;border:none;cursor:pointer}
+button.secondary{background:#e5e7eb;color:#111}
+#app{display:none}
+textarea{height:150px}
+</style>
 </head>
 
 <body>
 
-<div class="daypartCard" id="daypartCard" aria-label="Daypart buttons">
-  <div class="daypartTitle">משימה חוזרת</div>
-  <div class="daypartBtns">
-    <button class="daypartBtn" id="btnMorning" type="button">בוקר</button>
-    <button class="daypartBtn" id="btnNoon" type="button">צהריים</button>
-    <button class="daypartBtn" id="btnEvening" type="button">ערב</button>
-  </div>
+<div id="login">
+<h2>התחברות / הרשמה</h2>
+<input id="email" placeholder="מייל">
+<input id="password" type="password" placeholder="סיסמה">
+<button onclick="signIn()">התחברות</button>
+<button class="secondary" onclick="signUp()">הרשמה</button>
+<div id="msg" style="margin-top:10px;color:#b00020"></div>
 </div>
 
-<!-- LOGIN -->
-<div id="loginWrap" style="display:block;">
-  <div class="loginCard">
-    <div class="loginBrand">
-      <div>
-        <h1 class="loginTitle">QuietControl</h1>
-        <div class="loginSub">Calm order. Real control.</div>
-      </div>
-      <div class="pill">כניסה</div>
-    </div>
-
-    <label class="loginLabel" for="loginEmail">מייל</label>
-    <input id="loginEmail" type="email" inputmode="email" placeholder="name@example.com" style="direction:ltr;text-align:left;" />
-
-    <label class="loginLabel" for="loginPass">סיסמה</label>
-    <input id="loginPass" type="password" placeholder="******" style="direction:ltr;text-align:left;" />
-
-    <div class="loginRow" style="gap:10px; flex-wrap:wrap;">
-      <button class="loginBtn loginPrimary" id="btnSignIn" type="button">התחברות</button>
-      <button class="loginBtn loginGhost" id="btnSignUp" type="button">הרשמה</button>
-      <button class="loginBtn loginGhost" id="btnReset" type="button">איפוס סיסמה</button>
-      <button class="loginBtn loginGhost" id="btnClear" type="button">נקה</button>
-    </div>
-
-    <div id="authMsg" style="display:none; margin-top:10px; color:#b30000; font-weight:600;"></div>
-
-    <div class="loginHint">
-      ההזדהות לפי משתמש. הנתונים נשמרים בענן ורואים אותם מכל מכשיר.
-    </div>
-  </div>
-</div>
-
-<!-- APP -->
-<div id="appWrap" style="display:none;">
-  <div class="topbar">
-    <div class="topbarLeft">
-      <div class="mini">QuietControl - גרסה E27.6.31.2 (Work+Personal)</div>
-      <button class="saveBtn" id="btnSaveNow" type="button">שמור</button>
-      <div id="saveState">נשמר</div>
-    </div>
-    <button class="logout" id="btnLogout" type="button">התנתקות</button>
-  </div>
-
-  <div class="wrap">
-    <div class="grid">
-
-      <!-- MAIN -->
-      <div>
-        <div class="card">
-          <div class="banner" aria-label="QuietControl banner">
-            <div class="bannerLeft">
-              <div class="weatherStrip" id="weatherStrip"><div class="weatherLoading">טוען מזג אוויר...</div></div>
-            </div>
-            <div class="bannerText">
-              <div>
-                <div class="bannerTitle">QuietControl</div>
-                <div class="bannerSub">Calm order. Real control</div>
-              </div>
-              <div class="pill" id="weekPill">שבוע</div>
-            </div>
-          </div>
-
-          <div class="mot">
-            <div class="motTitle">לוח שבועי</div>
-            <div class="motRight">
-              <button class="fmtBtn" id="btnToday" type="button">היום</button>
-              <button class="fmtBtn" id="btnPrev" type="button">שבוע קודם</button>
-              <button class="fmtBtn" id="btnNext" type="button">שבוע הבא</button>
-              <button class="fmtBtn fmtExport" id="btnExport" type="button">Export to Excel</button>
-            </div>
-          </div>
-
-          <div class="tabs">
-            <button class="tab on" id="tabWork" type="button"><span class="dot work"></span>עבודה</button>
-            <button class="tab" id="tabPersonal" type="button"><span class="dot personal"></span>אישי</button>
-          </div>
-
-          <div class="section">
-            <div class="legend">
-              <span><span class="dot work"></span> עבודה</span>
-              <span><span class="dot personal"></span> אישי</span>
-            </div>
-
-            <table class="table" id="tbl">
-              <thead>
-                <tr id="theadRow"></tr>
-              </thead>
-              <tbody id="tbody"></tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <!-- SIDE -->
-      <div class="side">
-        <div class="card sideCard">
-          <div class="sideTitle">הערות</div>
-          <textarea class="note" id="notes" placeholder="כתבי כאן הערות..."></textarea>
-        </div>
-
-        <div class="card sideCard">
-          <div class="sideTitle">תזכורות</div>
-          <textarea class="note" id="reminders" placeholder="כתבי כאן תזכורות..."></textarea>
-        </div>
-
-        <div class="card sideCard">
-          <div class="sideTitle">ארכיון</div>
-          <textarea class="note" id="archive" placeholder="כתבי כאן ארכיון..."></textarea>
-        </div>
-      </div>
-
-    </div>
-  </div>
+<div id="app">
+<h2>QuietControl</h2>
+<textarea id="tasks" placeholder="כתבי כאן משימות..."></textarea>
+<button onclick="saveData()">שמור</button>
+<button class="secondary" onclick="logout()">התנתקות</button>
+<div id="saveMsg" style="margin-top:10px;color:#157a15"></div>
 </div>
 
 <script>
-/* =========================
-   LOGIN (Supabase Email+Password)
-   ========================= */
+
 const SUPABASE_URL = "https://xbvxjyiatcpvdcmakxwz.supabase.co";
 const SUPABASE_KEY = "sb_publishable_k8Drp1fN_c3509HkTyAKKw_ETsiUgZS";
+
 const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-function $(id){ return document.getElementById(id); }
+let currentUser = null;
+
+async function checkSession(){
+  const { data } = await supabase.auth.getSession();
+  if(data.session){
+    currentUser = data.session.user;
+    showApp();
+    loadData();
+  }
+}
 
 function showApp(){
-  $("loginWrap").style.display = "none";
-  $("appWrap").style.display = "block";
+  document.getElementById("login").style.display="none";
+  document.getElementById("app").style.display="block";
 }
+
 function showLogin(){
-  $("appWrap").style.display = "none";
-  $("loginWrap").style.display = "block";
+  document.getElementById("app").style.display="none";
+  document.getElementById("login").style.display="block";
 }
 
-function setAuthMsg(msg, isErr=true){
-  const el = $("authMsg");
-  if(!msg){ el.style.display="none"; el.textContent=""; return; }
-  el.style.display="block";
-  el.style.color = isErr ? "#b30000" : "#157a15";
-  el.textContent = msg;
+async function signUp(){
+  const email=document.getElementById("email").value;
+  const password=document.getElementById("password").value;
+  const { error } = await supabase.auth.signUp({email,password});
+  if(error) return showMsg(error.message);
+  showMsg("נרשמת. עכשיו התחברי.",false);
 }
 
-function clearAuthInputs(){
-  if($("loginEmail")) $("loginEmail").value = "";
-  if($("loginPass")) $("loginPass").value = "";
-  setAuthMsg("");
-}
-
-/* --- Cloud state: we sync these localStorage keys --- */
-const CLOUD_KEYS = [
-  "quietcontrol_e27_6ux",
-  "qc_daypart_state_v1"
-];
-
-function exportCloudState(){
-  const obj = {};
-  CLOUD_KEYS.forEach(k => { obj[k] = localStorage.getItem(k) || ""; });
-  return JSON.stringify(obj);
-}
-
-function importCloudState(stateStr){
-  if(!stateStr){ return; }
-  try{
-    const obj = JSON.parse(stateStr);
-    if(obj && typeof obj === "object"){
-      CLOUD_KEYS.forEach(k => {
-        if(Object.prototype.hasOwnProperty.call(obj, k)){
-          localStorage.setItem(k, obj[k] || "");
-        }
-      });
-      return;
-    }
-  }catch(e){}
-  localStorage.setItem("quietcontrol_e27_6ux", stateStr);
-}
-
-async function loadFromCloudAndInit(){
-  const { data: { session } } = await supabase.auth.getSession();
-  if(!session){
-    showLogin();
-    return;
-  }
-
-  try{
-    const userId = session.user.id;
-    const { data, error } = await supabase
-      .from("qc_states")
-      .select("state_json")
-      .eq("user_id", userId)
-      .maybeSingle();
-
-    if(error) throw error;
-    if(data && typeof data.state_json === "string"){
-      importCloudState(data.state_json);
-    }
-  }catch(e){
-    setAuthMsg("אזהרה: טעינה מהענן נכשלה. ממשיכים מקומית. (" + (e?.message||e) + ")", true);
-  }
-
+async function signIn(){
+  const email=document.getElementById("email").value;
+  const password=document.getElementById("password").value;
+  const { data,error } = await supabase.auth.signInWithPassword({email,password});
+  if(error) return showMsg(error.message);
+  currentUser=data.user;
   showApp();
-  initAppOnce();
+  loadData();
 }
 
-async function saveToCloudNow(){
-  const { data: { session } } = await supabase.auth.getSession();
-  if(!session) return;
-
-  const userId = session.user.id;
-  const payload = exportCloudState();
-
-  const { error } = await supabase
-    .from("qc_states")
-    .upsert({ user_id: userId, state_json: payload }, { onConflict: "user_id" });
-
-  if(error) throw error;
-}
-
-/* Debounced autosave to cloud */
-let cloudTimer = null;
-function scheduleCloudSave(){
-  if(cloudTimer) clearTimeout(cloudTimer);
-  cloudTimer = setTimeout(async ()=>{
-    try{ await saveToCloudNow(); }catch(e){}
-  }, 800);
-}
-
-async function signUpWithEmail(){
-  setAuthMsg("");
-  const email = String($("loginEmail").value || "").trim();
-  const pass  = String($("loginPass").value || "");
-  if(!email || !pass) return setAuthMsg("נא למלא מייל וסיסמה.", true);
-  if(pass.length < 6) return setAuthMsg("סיסמה קצרה מדי. מינימום 6 תווים.", true);
-
-  const { error } = await supabase.auth.signUp({ email, password: pass });
-  if(error) return setAuthMsg("שגיאה בהרשמה: " + error.message, true);
-  setAuthMsg("נרשמת בהצלחה. עכשיו התחברי.", false);
-}
-
-async function signInWithEmail(){
-  setAuthMsg("");
-  const email = String($("loginEmail").value || "").trim();
-  const pass  = String($("loginPass").value || "");
-  if(!email || !pass) return setAuthMsg("נא למלא מייל וסיסמה.", true);
-
-  const { error } = await supabase.auth.signInWithPassword({ email, password: pass });
-  if(error) return setAuthMsg("שגיאה בהתחברות: " + error.message, true);
-
-  await loadFromCloudAndInit();
-}
-
-async function resetPassword(){
-  setAuthMsg("");
-  const email = String($("loginEmail").value || "").trim();
-  if(!email) return setAuthMsg("נא להזין מייל ואז ללחוץ איפוס סיסמה.", true);
-
-  const { error } = await supabase.auth.resetPasswordForEmail(email, {
-    redirectTo: window.location.href
-  });
-  if(error) return setAuthMsg("שגיאה באיפוס: " + error.message, true);
-  setAuthMsg("נשלח מייל איפוס. בדקי גם ספאם.", false);
-}
-
-async function logoutSupabase(){
+async function logout(){
   await supabase.auth.signOut();
+  currentUser=null;
   showLogin();
-  clearAuthInputs();
-  location.reload();
 }
 
-async function bootAuth(){
-  $("btnClear")?.addEventListener("click", ()=>{ clearAuthInputs(); $("loginEmail")?.focus(); });
-  $("btnSignIn")?.addEventListener("click", signInWithEmail);
-  $("btnSignUp")?.addEventListener("click", signUpWithEmail);
-  $("btnReset")?.addEventListener("click", resetPassword);
-  $("btnLogout")?.addEventListener("click", logoutSupabase);
+function showMsg(t,isErr=true){
+  const el=document.getElementById("msg");
+  el.style.color=isErr?"#b00020":"#157a15";
+  el.textContent=t;
+}
 
-  $("loginPass")?.addEventListener("keydown", (e)=>{ if(e.key==="Enter") signInWithEmail(); });
+async function saveData(){
+  if(!currentUser) return;
+  const tasks=document.getElementById("tasks").value;
 
-  const { data: { session } } = await supabase.auth.getSession();
-  if(session){
-    await loadFromCloudAndInit();
-  } else {
-    showLogin();
+  await supabase
+    .from("qc_states")
+    .upsert({user_id:currentUser.id,state_json:tasks},{onConflict:"user_id"});
+
+  document.getElementById("saveMsg").textContent="נשמר לענן";
+}
+
+async function loadData(){
+  const { data } = await supabase
+    .from("qc_states")
+    .select("state_json")
+    .eq("user_id",currentUser.id)
+    .maybeSingle();
+
+  if(data && data.state_json){
+    document.getElementById("tasks").value=data.state_json;
   }
 }
 
-/* =========================
-   APP DATA + HELPERS
-   ========================= */
-const URGENCY = ["קל","בינוני","דחוף"];
-const DAYS = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
-const COCO_NUMBER = "12405054050";
-const KEY = "quietcontrol_e27_6ux";
+checkSession();
 
-const HEB_MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
-
-let mode = "work";  // work | personal
-let s = null;
-let saveTimer = null;
-let dirty = false;
-
-function def(){
-  return {
-    v: "E27.6.31.2",
-    weekStart: isoMonday(new Date()),
-    workTop: ["","",""],
-    personalTop: ["","",""],
-    week: [], // filled by ensureWeekMatrix()
-    notes: "",
-    reminders: "",
-    archive: "",
-    rowsOrder: [] // for row color / order (optional)
-  };
-}
-
-function isoMonday(d){
-  const date = new Date(d);
-  const day = (date.getDay()+6)%7; // Mon=0
-  date.setHours(0,0,0,0);
-  date.setDate(date.getDate()-day);
-  return date.toISOString().slice(0,10);
-}
-
-function weekLabel(iso){
-  const d = new Date(iso+"T00:00:00");
-  const e = new Date(d); e.setDate(e.getDate()+6);
-  const fmt = (x)=> `${x.getDate()} ${HEB_MONTHS[x.getMonth()]}`;
-  return `${fmt(d)} - ${fmt(e)}`;
-}
-
-function flashSaved(){
-  const el = $("saveState");
-  el.style.display = "block";
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(()=>{ el.style.display = "none"; }, 1200);
-}
-
-function save(showToast=false){
-  localStorage.setItem(KEY, JSON.stringify(s));
-  dirty = false;
-  if(showToast) flashSaved();
-  try{ scheduleCloudSave(); }catch(e){}
-}
-
-function normalize(){
-  s = JSON.parse(localStorage.getItem(KEY)) || def();
-  if(!s.weekStart) s.weekStart = isoMonday(new Date());
-  if(!s.workTop) s.workTop = ["","",""];
-  if(!s.personalTop) s.personalTop = ["","",""];
-  if(!s.notes) s.notes="";
-  if(!s.reminders) s.reminders="";
-  if(!s.archive) s.archive="";
-}
-
-function ensureWeekMatrix(){
-  if(!Array.isArray(s.week) || s.week.length!==7){
-    s.week = DAYS.map(()=> (mode==="work" ? ["","",""] : ["","",""]));
-  }
-}
-
-function setMode(m){
-  mode = m;
-  $("tabWork").classList.toggle("on", mode==="work");
-  $("tabPersonal").classList.toggle("on", mode==="personal");
-  render();
-}
-
-function setWeekStart(iso){
-  s.weekStart = iso;
-  save();
-  render();
-}
-
-function shiftWeek(delta){
-  const d = new Date(s.weekStart+"T00:00:00");
-  d.setDate(d.getDate() + delta*7);
-  setWeekStart(isoMonday(d));
-}
-
-function makeTh(text){
-  const th = document.createElement("th");
-  th.textContent = text;
-  return th;
-}
-
-function renderHead(){
-  const tr = $("theadRow");
-  tr.innerHTML = "";
-  DAYS.forEach((d, i)=>{
-    const date = new Date(s.weekStart+"T00:00:00");
-    date.setDate(date.getDate()+i);
-    const lbl = `${d} (${date.getDate()}/${date.getMonth()+1})`;
-    tr.appendChild(makeTh(lbl));
-  });
-  $("weekPill").textContent = "שבוע: " + weekLabel(s.weekStart);
-}
-
-function cellKey(di, ri){
-  return `${mode}_${di}_${ri}`;
-}
-
-function renderBody(){
-  const tbody = $("tbody");
-  tbody.innerHTML = "";
-
-  const rows = 3;
-  const tr = document.createElement("tr");
-
-  for(let di=0; di<7; di++){
-    const td = document.createElement("td");
-    const box = document.createElement("div");
-    box.className = "taskCell";
-
-    const div = document.createElement("div");
-    div.className = "taskText";
-    div.contentEditable = "true";
-    div.dataset.placeholder = "משימה...";
-    div.id = "t_" + cellKey(di,0);
-
-    const val = (mode==="work" ? (s.week?.[di]?.[0]||"") : (s.week?.[di]?.[0]||""));
-    div.textContent = val;
-
-    div.addEventListener("input", ()=>{
-      s.week[di][0] = div.textContent;
-      dirty = true;
-      save();
-    });
-
-    box.appendChild(div);
-    td.appendChild(box);
-    tr.appendChild(td);
-  }
-  tbody.appendChild(tr);
-}
-
-function renderSide(){
-  $("notes").value = s.notes || "";
-  $("reminders").value = s.reminders || "";
-  $("archive").value = s.archive || "";
-
-  $("notes").oninput = ()=>{ s.notes = $("notes").value; dirty=true; save(); };
-  $("reminders").oninput = ()=>{ s.reminders = $("reminders").value; dirty=true; save(); };
-  $("archive").oninput = ()=>{ s.archive = $("archive").value; dirty=true; save(); };
-}
-
-function render(){
-  ensureWeekMatrix();
-  renderHead();
-  renderBody();
-  renderSide();
-}
-
-function bindTopbar(){
-  $("btnSaveNow").addEventListener("click", ()=>save(true));
-  $("btnPrev").addEventListener("click", ()=>shiftWeek(-1));
-  $("btnNext").addEventListener("click", ()=>shiftWeek(1));
-  $("btnToday").addEventListener("click", ()=>setWeekStart(isoMonday(new Date())));
-
-  $("tabWork").addEventListener("click", ()=>setMode("work"));
-  $("tabPersonal").addEventListener("click", ()=>setMode("personal"));
-
-  $("btnExport").addEventListener("click", exportToExcel);
-}
-
-function exportToExcel(){
-  try{
-    const wb = XLSX.utils.book_new();
-    const wsData = [];
-    wsData.push(DAYS.map((d,i)=> d));
-    wsData.push(DAYS.map((d,i)=> s.week?.[i]?.[0]||""));
-    const ws = XLSX.utils.aoa_to_sheet(wsData);
-    XLSX.utils.book_append_sheet(wb, ws, "QuietControl");
-    XLSX.writeFile(wb, "QuietControl.xlsx");
-  }catch(e){}
-}
-
-/* Daypart */
-const DAYPART_KEY = "qc_daypart_state_v1";
-function loadDaypart(){
-  try{
-    const raw = localStorage.getItem(DAYPART_KEY);
-    const state = raw ? JSON.parse(raw) : { morning:false, noon:false, evening:false };
-    setDaypartUI(state);
-  }catch(e){
-    setDaypartUI({ morning:false, noon:false, evening:false });
-  }
-}
-function saveDaypart(state){
-  localStorage.setItem(DAYPART_KEY, JSON.stringify(state));
-  try{ scheduleCloudSave(); }catch(e){}
-}
-function setDaypartUI(state){
-  $("btnMorning").classList.toggle("on", !!state.morning);
-  $("btnNoon").classList.toggle("on", !!state.noon);
-  $("btnEvening").classList.toggle("on", !!state.evening);
-}
-function bindDaypart(){
-  const state = { morning:false, noon:false, evening:false };
-  try{
-    const raw = localStorage.getItem(DAYPART_KEY);
-    const st = raw ? JSON.parse(raw) : null;
-    if(st) Object.assign(state, st);
-  }catch(e){}
-
-  const toggle = (k)=>{
-    state[k] = !state[k];
-    setDaypartUI(state);
-    saveDaypart(state);
-  };
-
-  $("btnMorning").addEventListener("click", ()=>toggle("morning"));
-  $("btnNoon").addEventListener("click", ()=>toggle("noon"));
-  $("btnEvening").addEventListener("click", ()=>toggle("evening"));
-
-  setDaypartUI(state);
-}
-
-let inited = false;
-function initAppOnce(){
-  if(inited) return;
-  inited = true;
-
-  normalize();
-  ensureWeekMatrix();
-  bindTopbar();
-  bindDaypart();
-  loadDaypart();
-  render();
-}
-
-/* --- Weather (stable): Tel Aviv default --- */
-async function loadWeather(){
-  const strip = $("weatherStrip");
-  try{
-    const url = "https://api.open-meteo.com/v1/forecast?latitude=32.0853&longitude=34.7818&current=temperature_2m,weather_code,wind_speed_10m";
-    const r = await fetch(url);
-    const j = await r.json();
-    const t = j?.current?.temperature_2m;
-    const w = j?.current?.wind_speed_10m;
-    strip.innerHTML = `
-      <div style="font-weight:900; font-size:14px;">ת"א</div>
-      <div style="font-size:12px; color:#6a6a6a; font-weight:800;">${t ?? "-"}°C | רוח ${w ?? "-"} קמ"ש</div>
-    `;
-  }catch(e){
-    strip.innerHTML = `<div class="weatherLoading">מזג אוויר לא זמין</div>`;
-  }
-}
-
-document.addEventListener("DOMContentLoaded", ()=>{ bootAuth(); loadWeather(); });
 </script>
-
 </body>
 </html>
