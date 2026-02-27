@@ -1353,6 +1353,85 @@ th .thFlex{display:flex;align-items:center;justify-content:space-between;gap:8px
 }
 .fmtBtn.fmtExport svg{ width:16px; height:16px; }
 
+
+    /* Modal */
+    .hidden { display: none !important; }
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 9999;
+    }
+    .modal {
+      width: min(560px, 100%);
+      background: #fff;
+      border-radius: 18px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.18);
+      overflow: hidden;
+      direction: rtl;
+      text-align: right;
+    }
+    .modal-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border-bottom: 1px solid rgba(0,0,0,0.08);
+    }
+    .modal-title { font-weight: 700; }
+    .modal-close {
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      font-size: 18px;
+      line-height: 1;
+      padding: 6px 8px;
+      border-radius: 10px;
+    }
+    .modal-close:hover { background: rgba(0,0,0,0.06); }
+    .modal-body { padding: 14px 16px 2px; }
+    .form-row { margin-bottom: 12px; }
+    .form-label {
+      display: block;
+      font-size: 12px;
+      opacity: 0.8;
+      margin-bottom: 6px;
+      direction: ltr;
+      text-align: left;
+    }
+    .form-input {
+      width: 100%;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.18);
+      outline: none;
+      direction: ltr;
+      text-align: left;
+      font-size: 14px;
+    }
+    .form-input:focus { border-color: rgba(37, 194, 184, 0.8); box-shadow: 0 0 0 3px rgba(37, 194, 184, 0.15); }
+    .help-text { font-size: 12px; opacity: 0.7; margin-top: 6px; }
+    .error-text { color: #b42318; font-size: 13px; margin: 10px 0 0; }
+    .modal-actions {
+      display: flex;
+      gap: 10px;
+      padding: 12px 16px 16px;
+      justify-content: flex-end;
+    }
+    .btn {
+      padding: 10px 14px;
+      border-radius: 12px;
+      border: 1px solid rgba(0,0,0,0.12);
+      cursor: pointer;
+      font-weight: 600;
+    }
+    .btn.primary { background: rgba(37, 194, 184, 0.18); border-color: rgba(37, 194, 184, 0.35); }
+    .btn.secondary { background: rgba(0,0,0,0.04); }
+
 </style>
 
 
@@ -1404,9 +1483,15 @@ th .thFlex{display:flex;align-items:center;justify-content:space-between;gap:8px
     <div class="loginHint">
       כדי שהלינק ייפתח לך מכל מחשב עם אותם נתונים, עובדים עם התחברות ושמירה בענן.
     </div>
-    <div class="loginHint" style="margin-top:8px;">
-      <b>חשוב:</b> צריך להדביק בקוד את SUPABASE_URL ואת SUPABASE_ANON_KEY כדי שזה יעבוד. בלי זה הנתונים יישמרו רק בדפדפן הזה.
+    
+    <div class="loginHint" id="cloudHint" style="margin-top:8px;">
+      <b>חשוב:</b> כדי לראות את אותן משימות מכל מכשיר, חייבים להגדיר חיבור ל-Supabase (Project URL + Publishable key).
+      <div style="margin-top:8px; display:flex; gap:8px; flex-wrap:wrap;">
+        <button type="button" class="btn primary" id="openSbConfigBtn">הגדרות חיבור</button>
+        <span class="mini" style="opacity:0.8;">ב-Supabase: Settings (⚙️) -> API -> Project URL + Publishable key</span>
+      </div>
     </div>
+
 </div>
 </div>
 
@@ -1613,9 +1698,95 @@ th .thFlex{display:flex;align-items:center;justify-content:space-between;gap:8px
 
   ואז הדביקי כאן את ה-URL וה-ANON KEY.
 */
+/*
+  === מה חייב לעשות כדי שיישמר מכל מכשיר ===
+  1) ב-Supabase: Project Settings -> API
+     - Project URL (נראה כמו https://xxxxx.supabase.co)
+     - anon public key (מתחיל בדרך כלל ב-eyJ...)
+  2) להדביק את שני הערכים בשתי השורות למטה (SUPABASE_URL + SUPABASE_ANON_KEY)
+  3) לשמור את הקובץ ולהעלות ל-GitHub Pages מחדש.
 
-const SUPABASE_URL = "https://xbvxjyiatcpvdcmakxwz.supabase.co";      // <- להדביק מ-Supabase: Project Settings -> API -> Project URL
-const SUPABASE_ANON_KEY = "sb_publishable_k8Drp1fN_c3509HkTyAKKw_ETsiUgZS"; // <- להדביק מ-Supabase: Project Settings -> API -> anon public
+  אם לא ממלאים את הערכים - האתר יעבוד "לוקאלית" (localStorage) ולכן באינקוגניטו/נייד/מחשב אחר לא יראו את המשימות.
+*/
+
+
+const SUPABASE_URL = "https://xbvxjyiatcpvdcmakxwz.supabase.co"; // set via Settings modal (stored in localStorage)      // <- להדביק מ-Supabase: Project Settings -> API -> Project URL
+const SUPABASE_ANON_KEY = "sb_publishable_k8Drp1fN_c3509HkTyAKKw_ETsiUgZS"; // use Supabase "Publishable key" (NOT secret) - set via Settings modal // must be the "anon public" JWT key that usually starts with eyJ // <- להדביק מ-Supabase: Project Settings -> API -> anon public
+
+  // -----------------------------
+  // Supabase config (stored locally per browser)
+  // -----------------------------
+  const QC_SB_URL_LS_KEY = "qc_supabase_url";
+  const QC_SB_KEY_LS_KEY = "qc_supabase_publishable_key";
+
+  function getSupabaseConfig() {
+    const url = (localStorage.getItem(QC_SB_URL_LS_KEY) || SUPABASE_URL || "").trim();
+    const key = (localStorage.getItem(QC_SB_KEY_LS_KEY) || SUPABASE_ANON_KEY || "").trim();
+    return { url, key };
+  }
+
+  function isLikelySupabaseUrl(url) {
+    return /^https:\/\/.+/.test(url) && url.includes("supabase.co");
+  }
+
+  function isLikelyPublishableKey(key) {
+    // Supabase new keys often start with "sb_publishable_" (or JWT "eyJ")
+    return key.startsWith("sb_publishable_") || key.startsWith("eyJ");
+  }
+
+  function showSbConfigModal() {
+    const overlay = document.getElementById("sbConfigOverlay");
+    const { url, key } = getSupabaseConfig();
+    const urlInput = document.getElementById("sbProjectUrl");
+    const keyInput = document.getElementById("sbPublishableKey");
+    const err = document.getElementById("sbConfigError");
+
+    urlInput.value = url || "";
+    keyInput.value = key || "";
+    err.textContent = "";
+    err.classList.add("hidden");
+
+    overlay.classList.remove("hidden");
+    overlay.setAttribute("aria-hidden", "false");
+    urlInput.focus();
+  }
+
+  function hideSbConfigModal() {
+    const overlay = document.getElementById("sbConfigOverlay");
+    overlay.classList.add("hidden");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+
+  function saveSbConfig() {
+    const url = (document.getElementById("sbProjectUrl").value || "").trim();
+    const key = (document.getElementById("sbPublishableKey").value || "").trim();
+    const err = document.getElementById("sbConfigError");
+
+    const problems = [];
+    if (!isLikelySupabaseUrl(url)) problems.push("Project URL לא תקין. הוא צריך להתחיל ב-https:// ולהכיל supabase.co");
+    if (!isLikelyPublishableKey(key)) problems.push("Publishable key לא נראה תקין. חשוב להדביק Publishable key ולא Secret key.");
+
+    if (problems.length) {
+      err.textContent = problems.join(" | ");
+      err.classList.remove("hidden");
+      return false;
+    }
+
+    localStorage.setItem(QC_SB_URL_LS_KEY, url);
+    localStorage.setItem(QC_SB_KEY_LS_KEY, key);
+    hideSbConfigModal();
+    return true;
+  }
+
+  function requireSupabaseConfigOrExplain() {
+    const { url, key } = getSupabaseConfig();
+    const has = Boolean(url && key);
+    const hint = document.getElementById("cloudHint");
+    if (hint) {
+      hint.style.display = has ? "none" : "block";
+    }
+    return has;
+  }
 
 const KEY_AUTH = "qc_auth_e27_6ux"; // מצב UI מקומי (לא חובה)
 
@@ -1661,22 +1832,28 @@ function setErr(msg){
 function initSupabase(){
   try{
     if(typeof supabase === "undefined") return false;
-    if(!SUPABASE_URL || !SUPABASE_ANON_KEY){
-      setCloudState("disabled","חיבור לענן לא מוגדר: חסרים SUPABASE_URL / SUPABASE_ANON_KEY");
+    const { url, key } = getSupabaseConfig();
+    if(!url || !key){
+      setCloudState("disabled","חיבור לענן לא מוגדר: יש להגדיר Project URL + Publishable key");
+      try { requireSupabaseConfigOrExplain(); } catch(e) {}
       return false;
     }
 
     // Safety check: Supabase anon key is usually a long JWT string (starts with "eyJ").
     // If a wrong key was pasted (often starts with "sb_"), auth and data won't work across devices.
     const k = String(SUPABASE_ANON_KEY || "").trim();
-    if(k.startsWith("sb_") || k.length < 120){
+    if(!k || k === "PASTE_YOUR_SUPABASE_ANON_KEY_HERE" || k.startsWith("sb_") || (!k.startsWith("eyJ") && k.length < 120)){
       sbReady = false;
       sb = null;
-      setCloudState("error","מפתח Supabase ANON לא תקין. צריך להעתיק את ה-Anon public key הארוך שמתחיל ב-eyJ (Settings -> API).");
+      setCloudState("error","מפתח Supabase ANON לא תקין. צריך להעתיק את ה-Anon public key (JWT) מ-Supabase: Settings -> API -> anon public. הוא בדרך כלל מתחיל ב-eyJ. בלי זה אין סנכרון בין מכשירים.");
       return false;
     }
 
-    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+    const { url: SB_URL, key: SB_KEY } = getSupabaseConfig();
+    if (!SB_URL || !SB_KEY) {
+      sb = null;
+    } else {
+      sb = supabase.createClient(SB_URL, SB_KEY, {
       auth: {
         persistSession: true,
         autoRefreshToken: true,
@@ -1686,6 +1863,7 @@ function initSupabase(){
         storage: qcStorage
       }
     });
+    }
     sbReady = true;
     return true;
   }catch(e){
@@ -4001,7 +4179,77 @@ function exportWorkPersonal(){
     bind();
   }
 })();
+
+  // -----------------------------
+  // Supabase config modal bindings
+  // -----------------------------
+  (function bindSupabaseConfigUI() {
+    const openBtn = document.getElementById("openSbConfigBtn");
+    if (openBtn) openBtn.addEventListener("click", () => showSbConfigModal());
+
+    const closeBtn = document.getElementById("sbConfigCloseBtn");
+    const cancelBtn = document.getElementById("sbConfigCancelBtn");
+    const overlay = document.getElementById("sbConfigOverlay");
+
+    function close() { hideSbConfigModal(); }
+
+    if (closeBtn) closeBtn.addEventListener("click", close);
+    if (cancelBtn) cancelBtn.addEventListener("click", close);
+
+    if (overlay) {
+      overlay.addEventListener("click", (e) => {
+        if (e.target === overlay) close();
+      });
+    }
+
+    const saveBtn = document.getElementById("sbConfigSaveBtn");
+    if (saveBtn) {
+      saveBtn.addEventListener("click", () => {
+        const ok = saveSbConfig();
+        if (ok) {
+          // Reload so the app initializes Supabase with the saved config
+          location.reload();
+        }
+      });
+    }
+
+    // On first load, show/hide hint
+    try { requireSupabaseConfigOrExplain(); } catch (e) {}
+  })();
+
 </script>
+
+
+  <!-- Supabase Config Modal -->
+  <div id="sbConfigOverlay" class="modal-overlay hidden" aria-hidden="true">
+    <div class="modal" role="dialog" aria-modal="true" aria-labelledby="sbConfigTitle">
+      <div class="modal-header">
+        <div class="modal-title" id="sbConfigTitle">הגדרות חיבור (Supabase)</div>
+        <button class="modal-close" id="sbConfigCloseBtn" aria-label="סגור">✕</button>
+      </div>
+
+      <div class="modal-body">
+        <div class="form-row">
+          <label class="form-label" for="sbProjectUrl">Project URL</label>
+          <input id="sbProjectUrl" class="form-input" placeholder="https://xxxx.supabase.co" autocomplete="off" />
+          <div class="help-text">ב-Supabase: Settings (⚙️) -> API -> Project URL</div>
+        </div>
+
+        <div class="form-row">
+          <label class="form-label" for="sbPublishableKey">Publishable key</label>
+          <input id="sbPublishableKey" class="form-input" placeholder="sb_publishable_... או eyJ..." autocomplete="off" />
+          <div class="help-text">להדביק רק Publishable key. לא להשתמש ב-Secret key.</div>
+        </div>
+
+        <div id="sbConfigError" class="error-text hidden"></div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn secondary" id="sbConfigCancelBtn">ביטול</button>
+        <button class="btn primary" id="sbConfigSaveBtn">שמור</button>
+      </div>
+    </div>
+  </div>
 
 </body>
 </html>
