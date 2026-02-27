@@ -1789,7 +1789,7 @@ async function doAuth(){
 
 async function doLogout(){
   localStorage.setItem(KEY_AUTH, "0");
-  try{ localStorage.removeItem(KEY_BASE); }catch(e){}
+  try{ localStorage.removeItem(storageKey()); }catch(e){}
   setWhoAmI("");
   if(sbReady){
     try{ await sb.auth.signOut(); }catch(e){}
@@ -2172,11 +2172,10 @@ function save(showToast=false){
   try{ localStorage.setItem(storageKey(), JSON.stringify(s)); }catch(e){}
   dirty = false;
   if(showToast) flashSaved();
-  // Cloud autosave (per-user) when authenticated
-  try{
-    if(sbReady && (_qcUserId || lastUserId)) scheduleCloudSave();
-  }catch(e){}
+  // Cloud: persist per-user to Supabase (debounced)
+  try{ if(sbReady && _qcUserId){ scheduleCloudSave(); } }catch(e){}
 }
+
 
 function ensureWeekMatrix(){
   s.week = DAYS.map((d,di)=>{
