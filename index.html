@@ -1358,16 +1358,7 @@ th .thFlex{display:flex;align-items:center;justify-content:space-between;gap:8px
 
 
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-
-  <!-- Supabase SDK -->
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-  <script>
-    const _supa = window.supabase.createClient(
-      "https://xbvxjyiatcpvdcmakxwz.supabase.co",
-      "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhidnhqeWlhdGNwdmRjbWFreHd6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIwNjg4MDYsImV4cCI6MjA4NzY0NDgwNn0.dRuM2igb99KGWGu80HDkuQznjJxOb7s2kub1mirbH3A"
-    );
-    let _currentUser = null;
-  </script>
 </head>
 
 <body>
@@ -1383,46 +1374,48 @@ th .thFlex{display:flex;align-items:center;justify-content:space-between;gap:8px
 
 
 <!-- LOGIN -->
-<div id="loginWrap" style="display:flex;">
+<div id="loginWrap" style="display:none;">
   <div class="loginCard">
     <div class="loginBrand">
       <div>
-        <h1 class="loginTitle" style="font-size:22px;">QuietControl</h1>
+        <h1 class="loginTitle">QuietControl</h1>
         <div class="loginSub">Calm order. Real control.</div>
       </div>
-      <div class="pill" id="loginModePill">כניסה</div>
+      <div class="pill" id="authModePill">כניסה</div>
     </div>
 
-    <div style="display:flex;gap:8px;margin-top:14px;">
-      <button class="loginBtn loginPrimary" id="tabSignin" type="button" onclick="switchLoginTab('signin')">כניסה</button>
-      <button class="loginBtn loginGhost"   id="tabSignup" type="button" onclick="switchLoginTab('signup')">הרשמה</button>
-    </div>
-
-    <label class="loginLabel" for="emailInp">אימייל</label>
-    <input id="emailInp" type="email" placeholder="your@email.com"
-      style="width:100%;padding:10px 12px;border:1px solid #e5e7f2;border-radius:12px;font-size:14px;outline:none;box-sizing:border-box;margin-bottom:2px;" />
+    <label class="loginLabel" for="email">אימייל</label>
+    <input id="email" type="email" autocomplete="username" placeholder="name@example.com" />
 
     <label class="loginLabel" for="pw">סיסמה</label>
-    <input id="pw" type="password" placeholder="לפחות 6 תווים"
-      style="width:100%;padding:10px 12px;border:1px solid #e5e7f2;border-radius:12px;font-size:14px;outline:none;box-sizing:border-box;" />
+    <input id="pw" type="password" autocomplete="current-password" placeholder="" />
 
-    <div class="loginRow" style="margin-top:14px;">
+    <label class="loginLabel" for="pw2" id="pw2Label" style="display:none;">אישור סיסמה</label>
+    <input id="pw2" type="password" autocomplete="new-password" placeholder="" style="display:none;" />
+
+    <div class="loginRow">
       <button class="loginBtn loginPrimary" id="btnLogin" type="button">היכנסי</button>
-      <button class="loginBtn loginGhost"   id="btnClear" type="button">נקה</button>
+      <button class="loginBtn loginGhost" id="btnToggleMode" type="button">אין לי משתמש - הרשמה</button>
+      <button class="loginBtn loginGhost" id="btnClear" type="button">נקה</button>
     </div>
 
-    <div id="err"    style="margin-top:10px;color:#c0392b;font-size:12.5px;display:none;font-weight:800;"></div>
-    <div id="loginOk" style="margin-top:10px;color:#2e9b63;font-size:12.5px;display:none;font-weight:800;"></div>
+    <div id="err" style="display:none;">שגיאה</div>
 
-    <div class="loginHint">הנתונים נשמרים בענן — ניתן לגשת מכל מכשיר.</div>
-  </div>
+    <div class="loginHint">
+      כדי שהלינק ייפתח לך מכל מחשב עם אותם נתונים, עובדים עם התחברות ושמירה בענן.
+    </div>
+    <div class="loginHint" style="margin-top:8px;">
+      <b>חשוב:</b> צריך להדביק בקוד את SUPABASE_URL ואת SUPABASE_ANON_KEY כדי שזה יעבוד. בלי זה הנתונים יישמרו רק בדפדפן הזה.
+    </div>
+</div>
 </div>
 
 <!-- APP -->
-<div id="appWrap" style="display:none;">
+<div id="appWrap" style="display:block;">
   <div class="topbar">
     <div class="topbarLeft">
       <div class="mini">QuietControl - גרסה E27.6.31.2 (Work+Personal)</div>
+      <div class="mini" id="whoami" style="font-weight:900;"></div>
       <button class="saveBtn" id="btnSaveNow" type="button">שמור</button>
       <div id="saveState">נשמר</div>
     </div>
@@ -1584,72 +1577,272 @@ th .thFlex{display:flex;align-items:center;justify-content:space-between;gap:8px
 <script>
 
 /* =========================
-   LOGIN — Supabase
+   AUTH (Supabase)
    ========================= */
+
+/*
+  כדי לעבוד "אותו משתמש מכל מקום" צריך בסיס נתונים והתחברות.
+  כאן זה עובד עם Supabase Auth + טבלה אחת ששומרת את מצב האפליקציה למשתמש.
+
+  מה עושים ב-Supabase (חד פעמי):
+  1) פתחי Project
+  2) Auth -> Providers -> Email: ON
+  3) Database -> SQL Editor: הריצי:
+
+  create table if not exists public.qc_states (
+    user_id uuid primary key,
+    state_json jsonb not null,
+    updated_at timestamptz not null default now()
+  );
+
+  alter table public.qc_states enable row level security;
+
+  create policy "Users can read own state"
+  on public.qc_states for select
+  using (auth.uid() = user_id);
+
+  create policy "Users can upsert own state"
+  on public.qc_states for insert
+  with check (auth.uid() = user_id);
+
+  create policy "Users can update own state"
+  on public.qc_states for update
+  using (auth.uid() = user_id);
+
+  ואז הדביקי כאן את ה-URL וה-ANON KEY.
+*/
+
+const SUPABASE_URL = "https://xbvxjyiatcpvdcmakxwz.supabase.co";      // <- להדביק מ-Supabase: Project Settings -> API -> Project URL
+const SUPABASE_ANON_KEY = "sb_publishable_k8Drp1fN_c3509HkTyAKKw_ETsiUgZS"; // <- להדביק מ-Supabase: Project Settings -> API -> anon public
+
+const KEY_AUTH = "qc_auth_e27_6ux"; // מצב UI מקומי (לא חובה)
+let sb = null;
+let sbReady = false;
+let lastUserId = null;
 
 function $(id){ return document.getElementById(id); }
 
-let _loginMode = "signin";
-
-function switchLoginTab(mode){
-  _loginMode = mode;
-  $("tabSignin").className = mode==="signin" ? "loginBtn loginPrimary" : "loginBtn loginGhost";
-  $("tabSignup").className = mode==="signup" ? "loginBtn loginPrimary" : "loginBtn loginGhost";
-  $("btnLogin").textContent  = mode==="signin" ? "היכנסי" : "הירשמי";
-  $("loginModePill").textContent = mode==="signin" ? "כניסה" : "הרשמה";
-  $("err").style.display = "none";
-  $("loginOk").style.display = "none";
-}
-
-function _showErr(msg){ $("err").textContent=msg; $("err").style.display="block"; $("loginOk").style.display="none"; }
-function _showOk(msg){ $("loginOk").textContent=msg; $("loginOk").style.display="block"; $("err").style.display="none"; }
-
-function showApp(user){
-  _currentUser = user;
+function showApp(){
   $("loginWrap").style.display = "none";
-  $("appWrap").style.display  = "block";
-  // Show email in topbar
-  const mini = document.querySelector(".topbar .mini");
-  if(mini) mini.textContent = "QuietControl • " + (user.email || "");
+  $("appWrap").style.display = "block";
+  if($("err")) $("err").style.display = "none";
 }
-
 function showLogin(){
-  _currentUser = null;
+  $("appWrap").style.display = "none";
   $("loginWrap").style.display = "flex";
-  $("appWrap").style.display   = "none";
+  if($("err")) $("err").style.display = "none";
+}
+function setWhoAmI(email){
+  try{
+    const el = $("whoami");
+    if(!el) return;
+    el.textContent = email ? ("מחובר/ת: " + email) : "";
+  }catch(e){}
 }
 
-async function tryLogin(){
-  const email = ($("emailInp").value||"").trim();
-  const pw    = ($("pw").value||"").trim();
-  if(!email||!pw){ _showErr("נא למלא אימייל וסיסמה"); return; }
+function setErr(msg){
+  const el = $("err");
+  if(!el) return;
+  el.textContent = msg || "שגיאה";
+  el.style.display = "block";
+}
 
-  const btn = $("btnLogin");
-  btn.disabled = true; btn.textContent = "...";
-
+function initSupabase(){
   try{
-    if(_loginMode === "signin"){
-      const {data,error} = await _supa.auth.signInWithPassword({email, password:pw});
-      if(error) throw error;
-      showApp(data.user);
-      await _bootApp();
-    } else {
-      const {data,error} = await _supa.auth.signUp({email, password:pw});
-      if(error) throw error;
-      _showOk("נרשמת בהצלחה! כעת תוכלי להיכנס.");
-      switchLoginTab("signin");
-    }
+    if(typeof supabase === "undefined") return false;
+    if(!SUPABASE_URL || !SUPABASE_ANON_KEY) return false;
+    sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    sbReady = true;
+    return true;
   }catch(e){
-    const m=(e.message||"").toLowerCase();
-    if(m.includes("invalid login")||m.includes("invalid credentials")) _showErr("אימייל או סיסמה שגויים");
-    else if(m.includes("already registered")||m.includes("user already")) _showErr("האימייל כבר רשום — נסי להיכנס");
-    else if(m.includes("password")&&m.includes("6")) _showErr("הסיסמה חייבת להכיל לפחות 6 תווים");
-    else _showErr("שגיאה: "+(e.message||"נסי שוב"));
-  }finally{
-    btn.disabled=false;
-    btn.textContent = _loginMode==="signin" ? "היכנסי" : "הירשמי";
+    sbReady = false;
+    sb = null;
+    return false;
   }
 }
+
+let authMode = "login"; // login | signup
+function setAuthMode(mode){
+  authMode = (mode === "signup") ? "signup" : "login";
+  const pill = $("authModePill");
+  const btn = $("btnLogin");
+  const toggle = $("btnToggleMode");
+  const pw2 = $("pw2");
+  const pw2Label = $("pw2Label");
+
+  if(pill) pill.textContent = (authMode === "login") ? "כניסה" : "הרשמה";
+  if(btn) btn.textContent = (authMode === "login") ? "היכנסי" : "הירשמי";
+  if(toggle) toggle.textContent = (authMode === "login") ? "אין לי משתמש - הרשמה" : "יש לי משתמש - כניסה";
+
+  const showPw2 = (authMode === "signup");
+  if(pw2) pw2.style.display = showPw2 ? "block" : "none";
+  if(pw2Label) pw2Label.style.display = showPw2 ? "block" : "none";
+
+  if($("err")) $("err").style.display = "none";
+}
+
+async function sbGetUser(){
+  if(!sbReady) return null;
+  const { data } = await sb.auth.getUser();
+  return data && data.user ? data.user : null;
+}
+
+async function cloudLoadToLocal(){
+  if(!sbReady) return;
+
+  const user = await sbGetUser();
+  if(!user) return;
+
+  const { data, error } = await sb
+    .from("qc_states")
+    .select("state_json")
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  if(error) return;
+
+  if(data && data.state_json){
+    try{ localStorage.setItem(storageKey(), JSON.stringify(data.state_json)); }catch(e){}
+  } else {
+    const initial = def();
+    try{ localStorage.setItem(storageKey(), JSON.stringify(initial)); }catch(e){}
+    await cloudSaveNow();
+  }
+}
+
+let cloudSaveTimer = null;
+async function cloudSaveNow(){
+  if(!sbReady) return;
+  const user = await sbGetUser();
+  if(!user) return;
+
+  let payload = null;
+  try{ payload = JSON.parse(localStorage.getItem(storageKey()) || "null"); }catch(e){ payload = null; }
+  if(!payload) return;
+
+  await sb.from("qc_states").upsert({
+    user_id: user.id,
+    state_json: payload,
+    updated_at: new Date().toISOString()
+  });
+}
+
+function scheduleCloudSave(){
+  if(!sbReady) return;
+  clearTimeout(cloudSaveTimer);
+  cloudSaveTimer = setTimeout(()=>{ cloudSaveNow(); }, 700);
+}
+
+async function doAuth(){
+  const email = String($("email")?.value || "").trim();
+  const pw = String($("pw")?.value || "").trim();
+  const pw2 = String($("pw2")?.value || "").trim();
+
+  if(!email || !email.includes("@")){ setErr("נא להזין אימייל תקין"); return; }
+  if(pw.length < 6){ setErr("סיסמה חייבת להיות לפחות 6 תווים"); return; }
+  if(authMode === "signup" && pw !== pw2){ setErr("הסיסמאות לא תואמות"); return; }
+
+  if(!sbReady){
+    localStorage.setItem(KEY_AUTH, "1");
+    showApp();
+    initAppOnce();
+    return;
+  }
+
+  try{
+    if(authMode === "login"){
+      const { error } = await sb.auth.signInWithPassword({ email, password: pw });
+      if(error) throw error;
+    } else {
+      const { error } = await sb.auth.signUp({ email, password: pw });
+      if(error) throw error;
+      setErr("נרשמת בהצלחה. אם נדרש אימות מייל - בדקי את תיבת הדואר ואז היכנסי.");
+      setAuthMode("login");
+      return;
+    }
+  }catch(e){
+    setErr(e && e.message ? e.message : "שגיאה בהתחברות");
+    return;
+  }
+}
+
+async function doLogout(){
+  localStorage.setItem(KEY_AUTH, "0");
+  try{ localStorage.removeItem(KEY_BASE); }catch(e){}
+  setWhoAmI("");
+  if(sbReady){
+    try{ await sb.auth.signOut(); }catch(e){}
+  }
+  showLogin();
+}
+
+
+function bindAuthUi(){
+  $("btnLogin")?.addEventListener("click", ()=>{ doAuth(); });
+  $("btnToggleMode")?.addEventListener("click", ()=>{
+    setAuthMode(authMode === "login" ? "signup" : "login");
+  });
+  $("btnClear")?.addEventListener("click", ()=>{
+    if($("email")) $("email").value = "";
+    if($("pw")) $("pw").value = "";
+    if($("pw2")) $("pw2").value = "";
+    if($("err")) $("err").style.display = "none";
+    $("email")?.focus();
+  });
+
+  ["email","pw","pw2"].forEach(id=>{
+    $(id)?.addEventListener("keydown", (e)=>{ if(e.key === "Enter") doAuth(); });
+  });
+
+  $("btnLogout")?.addEventListener("click", ()=>{ doLogout(); });
+}
+
+async function initAuth(){
+  initSupabase();
+  bindAuthUi();
+  setAuthMode("login");
+
+  if(sbReady){
+    sb.auth.onAuthStateChange(async (_event, session)=>{
+      if(session && session.user){
+        try{
+          if(lastUserId && lastUserId !== session.user.id){
+            // Legacy cleanup: older versions used a shared local key (no user suffix)
+            try{ localStorage.removeItem(KEY_BASE); }catch(e){}
+          }
+        }catch(e){}
+        _qcUserId = session.user.id;
+        lastUserId = session.user.id;
+        setWhoAmI(session.user.email);
+        await cloudLoadToLocal();
+        showApp();
+        initAppOnce();
+      } else {
+        lastUserId = null;
+        setWhoAmI("");
+        showLogin();
+      }
+    });
+
+    const { data } = await sb.auth.getSession();
+    if(data && data.session && data.session.user){
+      try{ localStorage.removeItem(KEY_BASE); }catch(e){}
+      lastUserId = data.session.user.id;
+      setWhoAmI(data.session.user.email);
+      await cloudLoadToLocal();
+      showApp();
+      initAppOnce();
+    } else {
+      lastUserId = null;
+      setWhoAmI("");
+      showLogin();
+    }
+  } else {
+    setErr("Supabase לא מוגדר בקוד. כרגע זה יעבוד רק על אותו דפדפן. כדי לפתוח מכל מקום - הדביקי SUPABASE_URL + SUPABASE_ANON_KEY.");
+    showLogin();
+  }
+}
+
 
 /* =========================
    APP DATA + HELPERS
@@ -1657,7 +1850,14 @@ async function tryLogin(){
 const URGENCY = ["היום","השבוע","החודש"];
 const DAYS = ["ראשון","שני","שלישי","רביעי","חמישי","שישי","שבת"];
 const COCO_NUMBER = "12405054050";
-const KEY = "quietcontrol_e27_6ux";
+const KEY_BASE = "quietcontrol_e27_6ux";
+let _qcUserId = null; // set after login
+
+function storageKey(userId){
+  const uid = userId || _qcUserId || "anon";
+  return KEY_BASE + "::" + uid;
+}
+
 
 const HEB_MONTHS = ["ינואר","פברואר","מרץ","אפריל","מאי","יוני","יולי","אוגוסט","ספטמבר","אוקטובר","נובמבר","דצמבר"];
 
@@ -1948,16 +2148,9 @@ function flashSaved(){
 }
 
 function save(showToast=false){
-  localStorage.setItem(KEY, JSON.stringify(s));
+  localStorage.setItem(storageKey(), JSON.stringify(s));
   dirty = false;
   if(showToast) flashSaved();
-  // Push to Supabase cloud
-  if(_currentUser){
-    _supa.from("tasks").upsert(
-      { user_id: _currentUser.id, task_data: s },
-      { onConflict: "user_id" }
-    ).then(({error})=>{ if(error) console.warn("cloud save error:", error.message); });
-  }
 }
 
 function ensureWeekMatrix(){
@@ -1999,7 +2192,7 @@ function normalizeBrainList(arr){
 }
 
 function normalize(){
-  s = JSON.parse(localStorage.getItem(KEY)) || def();
+  s = JSON.parse(localStorage.getItem(storageKey())) || def();
 
   // Migration from older single top-list version:
   if(Array.isArray(s.brain) && !Array.isArray(s.brainWork)){
@@ -2883,70 +3076,23 @@ function initAppOnce(){
 function bindLoginEvents(){
   $("btnLogin").onclick = tryLogin;
   $("btnClear").onclick = ()=>{
-    $("emailInp").value = "";
     $("pw").value = "";
     $("err").style.display = "none";
-    $("loginOk").style.display = "none";
+    $("pw").focus();
   };
-  $("btnLogout").onclick = async ()=>{
-    await _supa.auth.signOut();
+  $("btnLogout").onclick = ()=>{
+    setAuthed(false);
     showLogin();
   };
-  $("pw").addEventListener("keydown", e=>{ if(e.key==="Enter") tryLogin(); });
-  $("emailInp").addEventListener("keydown", e=>{ if(e.key==="Enter") $("pw").focus(); });
-}
-
-/* load cloud data then render */
-async function _loadCloud(){
-  if(!_currentUser) return;
-  try{
-    const {data,error} = await _supa.from("tasks")
-      .select("task_data")
-      .eq("user_id", _currentUser.id)
-      .single();
-    if(!error && data && data.task_data){
-      s = data.task_data;
-      // normalize critical fields
-      if(!Array.isArray(s.brainWork))    s.brainWork    = makeDefaultBrainRows();
-      if(!Array.isArray(s.brainPersonal))s.brainPersonal= makeDefaultBrainRows();
-      if(!Array.isArray(s.queueWork))    s.queueWork    = [];
-      if(!Array.isArray(s.queuePersonal))s.queuePersonal= [];
-      if(!Array.isArray(s.archive))      s.archive      = [];
-      if(!Number.isInteger(s.weekRowCount)||s.weekRowCount<3) s.weekRowCount=3;
-      if(typeof s.notes!=="string") s.notes="";
-      ensureWeekMatrix();
-    }
-  }catch(e){ console.warn("cloud load error:", e); }
-}
-
-async function _bootApp(){
-  normalize(); // load localStorage as fallback
-  await _loadCloud(); // override with cloud (always wins)
-  autoRolloverWeekIfNeeded();
-  setCurrentWeek(weekStartSundayIso(todayIso()));
-  updateTopMonthTitle();
-  if($("notesText")) $("notesText").value = s.notes;
-  if(!appInited) initAppOnce();
-  else { renderBrain(); renderWeek(); renderQueue(); renderArchive(); }
+  $("pw").addEventListener("keydown", (e)=>{
+    if(e.key === "Enter") tryLogin();
+  });
 }
 
 /* =========================
    BOOT
    ========================= */
-document.addEventListener("DOMContentLoaded", async ()=>{
-  bindLoginEvents();
-  // Check existing session
-  const { data:{ session } } = await _supa.auth.getSession();
-  if(session && session.user){
-    showApp(session.user);
-    await _bootApp();
-  } else {
-    showLogin();
-  }
-  _supa.auth.onAuthStateChange((event)=>{
-    if(event==="SIGNED_OUT") showLogin();
-  });
-});
+document.addEventListener("DOMContentLoaded", ()=>{ initAuth();  try{ showApp(); }catch(e){} initAppOnce(); });
 
 
 /* --- Weather (stable): Tel Aviv default via Open-Meteo (no permissions, no key needed) --- */
