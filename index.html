@@ -1418,6 +1418,7 @@ th .thFlex{display:flex;align-items:center;justify-content:space-between;gap:8px
       <div class="mini" id="whoami" style="font-weight:900;"></div>
       <button class="saveBtn" id="btnSaveNow" type="button">שמור</button>
       <div id="saveState">נשמר</div>
+      <div id="cloudState" style="display:none;font-size:12px;color:#0f5555;font-weight:900;font-family:var(--fontHead);">ענן: נשמר</div>
     </div>
     <button class="logout" id="btnLogout" type="button">התנתקות</button>
   </div>
@@ -1711,45 +1712,79 @@ async function sbGetUser(){
 async function cloudLoadToLocal(){
   if(!sbReady) return;
 
-  const user = await sbGetUser();
-  if(!user) return;
+  try{
+    const user = await sbGetUser();
+    if(!user){
+      setCloudState("ענן: לא מחובר", "warn");
+      return;
+    }
 
-  const { data, error } = await sb
-    .from("qc_states")
-    .select("state_json")
-    .eq("user_id", user.id)
-    .maybeSingle();
+    setCloudState("ענן: טוען...", "warn");
+    const { data, error } = await sb
+      .from("qc_states")
+      .select("state_json")
+      .eq("user_id", user.id)
+      .maybeSingle();
 
-  if(error) return;
+    if(error){
+      console.error("Supabase load error:", error);
+      setCloudState("ענן: שגיאה בטעינה", "err");
+      return;
+    }
 
-  if(data && data.state_json){
-    try{ localStorage.setItem(storageKey(), JSON.stringify(data.state_json)); }catch(e){}
-  } else {
-    const initial = def();
-    try{ localStorage.setItem(storageKey(), JSON.stringify(initial)); }catch(e){}
-    await cloudSaveNow();
+    if(data && data.state_json){
+      try{ localStorage.setItem(storageKey(), JSON.stringify(data.state_json)); }catch(e){}
+      setCloudState("ענן: נטען", "ok");
+    } else {
+      const initial = def();
+      try{ localStorage.setItem(storageKey(), JSON.stringify(initial)); }catch(e){}
+      await cloudSaveNow();
+      setCloudState("ענן: נוצר פרופיל חדש", "ok");
+    }
+  }catch(err){
+    console.error("Cloud load exception:", err);
+    setCloudState("ענן: שגיאה", "err");
   }
 }
 
 let cloudSaveTimer = null;
 async function cloudSaveNow(){
   if(!sbReady) return;
-  const user = await sbGetUser();
-  if(!user) return;
+  try{
+    const user = await sbGetUser();
+    if(!user){
+      setCloudState("ענן: לא מחובר", "warn");
+      return;
+    }
 
-  let payload = null;
-  try{ payload = JSON.parse(localStorage.getItem(storageKey()) || "null"); }catch(e){ payload = null; }
-  if(!payload) return;
+    let payload = null;
+    try{ payload = JSON.parse(localStorage.getItem(storageKey()) || "null"); }catch(e){ payload = null; }
+    if(!payload){
+      setCloudState("ענן: אין נתונים לשמירה", "warn");
+      return;
+    }
 
-  await sb.from("qc_states").upsert({
-    user_id: user.id,
-    state_json: payload,
-    updated_at: new Date().toISOString()
-  });
+    const { error } = await sb.from("qc_states").upsert({
+      user_id: user.id,
+      state_json: payload,
+      updated_at: new Date().toISOString()
+    });
+
+    if(error){
+      console.error("Supabase upsert error:", error);
+      setCloudState("ענן: שגיאה בשמירה", "err");
+    }else{
+      setCloudState("ענן: נשמר", "ok");
+    }
+  }catch(err){
+    console.error("Cloud save exception:", err);
+    setCloudState("ענן: שגיאה", "err");
+  }
 }
 
 function scheduleCloudSave(){
   if(!sbReady) return;
+  setCloudState("ענן: שומר...", "warn");
   clearTimeout(cloudSaveTimer);
   cloudSaveTimer = setTimeout(()=>{ cloudSaveNow(); }, 700);
 }
@@ -2162,11 +2197,24 @@ function markDirty(){ dirty = true; }
 let saveTimer = null;
 function flashSaved(){
   const el = $("saveState");
+  if(el){
+    el.style.display = "block";
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=>{ el.style.display = "none"; }, 1200);
+  }
+}
+
+function setCloudState(text, kind){
+  const el = $("cloudState");
   if(!el) return;
   el.style.display = "block";
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(()=>{ el.style.display = "none"; }, 1200);
+  el.textContent = text;
+  // kind: ok | warn | err
+  if(kind === "err") el.style.color = "#a40000";
+  else if(kind === "warn") el.style.color = "#8a5a00";
+  else el.style.color = "#0f5555";
 }
+
 
 function save(showToast=false){
   try{ localStorage.setItem(storageKey(), JSON.stringify(s)); }catch(e){}
